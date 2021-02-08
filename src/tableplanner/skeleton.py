@@ -1,28 +1,13 @@
-"""
-This is a skeleton file that can serve as a starting point for a Python
-console script. To run this script uncomment the following lines in the
-``[options.entry_points]`` section in ``setup.cfg``::
-
-    console_scripts =
-         fibonacci = tableplanner.skeleton:run
-
-Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
-which will install the command ``fibonacci`` inside your current environment.
-
-Besides console scripts, the header (i.e. until ``_logger``...) of this file can
-also be used as template for Python modules.
-
-Note:
-    This skeleton file can be safely removed if not needed!
-
-References:
-    - https://setuptools.readthedocs.io/en/latest/userguide/entry_point.html
-    - https://pip.pypa.io/en/stable/reference/pip_install
-"""
-
 import argparse
 import logging
 import sys
+
+import genetic
+import genetic.crossovers
+import genetic.mutations
+import genetic.selections
+import numpy as np
+import pandas as pd
 
 from tableplanner import __version__
 
@@ -31,13 +16,6 @@ __copyright__ = "Tomasz Homoncik"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
-
-
-# ---- Python API ----
-# The functions defined in this section can be imported by users in their
-# Python scripts/interactive interpreter, e.g. via
-# `from tableplanner.skeleton import fib`,
-# when using this Python module as a library.
 
 
 def fib(n):
@@ -56,10 +34,43 @@ def fib(n):
     return a
 
 
+def foo(guestsCsvFile, seatsCsvFile):
+    """Some action foo
+
+    Args:
+        a (file): lhs
+        b (file): rhs
+
+    Returns:
+        int: always 1 xd
+    """
+    guests = pd.read_table(guestsCsvFile, sep=",", index_col=0)
+    guest_names = guests.columns.values
+    seats = pd.read_table(seatsCsvFile, sep=",", index_col=0, dtype=int)
+
+    first_generation = [
+        np.random.permutation(range(len(guest_names))) for _ in range(10)
+    ]
+
+    def fitness_score(chromosome):
+        _logger.info("Inside fitness function")
+        score = 0
+        for i, x in enumerate(chromosome):
+            for j, y in enumerate(chromosome):
+                score += guests[guest_names[x]][guest_names[y]] * seats[str(i)][j]
+        return score
+
+    return genetic.optimize(
+        first_generation,
+        genetic.selections.elite_selection,
+        genetic.crossovers.order_crossover,
+        genetic.mutations.swap_mutation,
+        fitness_score,
+        100,
+    )
+
+
 # ---- CLI ----
-# The functions defined in this section are wrappers around the main Python
-# API allowing them to be called directly from the terminal as a CLI
-# executable/script.
 
 
 def parse_args(args):
@@ -72,13 +83,20 @@ def parse_args(args):
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
-    parser = argparse.ArgumentParser(description="Just a Fibonacci demonstration")
+    parser = argparse.ArgumentParser(description="Create a table seat planner")
     parser.add_argument(
         "--version",
         action="version",
         version="tableplanner {ver}".format(ver=__version__),
     )
-    parser.add_argument(dest="n", help="n-th Fibonacci number", type=int, metavar="INT")
+    parser.add_argument(
+        dest="layout", help="file with layout description", type=argparse.FileType("r")
+    )
+    parser.add_argument(
+        dest="guests",
+        help="file with guests and relationships description",
+        type=argparse.FileType("r"),
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -123,7 +141,9 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     _logger.debug("Starting crazy calculations...")
-    print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
+    print("Hello there")
+    bar = foo(args.layout, args.guests)
+    print("The result is {}".format(bar))
     _logger.info("Script ends here")
 
 
@@ -136,14 +156,4 @@ def run():
 
 
 if __name__ == "__main__":
-    # ^  This is a guard statement that will prevent the following code from
-    #    being executed in the case someone imports this file instead of
-    #    executing it as a script.
-    #    https://docs.python.org/3/library/__main__.html
-
-    # After installing your project with pip, users can also run your Python
-    # modules as scripts via the ``-m`` flag, as defined in PEP 338::
-    #
-    #     python -m tableplanner.skeleton 42
-    #
     run()

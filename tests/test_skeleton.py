@@ -1,3 +1,7 @@
+"""
+    Some tests here
+"""
+
 import pytest
 
 from tableplanner.skeleton import fib, main

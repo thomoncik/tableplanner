@@ -1,7 +1,9 @@
 # tableplanner
 
-Add a short description here!
-
+Tableplanner is a tool which may help you organise an important event.
+1. Some marketing stuff here
+1. also here
+1. marketing here
 
 ## Note
 

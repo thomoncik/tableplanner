@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+from progress.bar import Bar
 
 _logger = logging.getLogger(__name__)
 
@@ -15,18 +16,27 @@ def optimize(
     crossover,
     mutation,
     fitness,
-    stop_condition,
+    max_generations,
     mutation_probability=0.2,
 ):
-    population = np.array(
-        first_generation_generator
-    )  # np.array([np.random.permutation(range(len(guest_names))) for _ in range(10)])
+    """Parse command line parameters
+
+    Args:
+      args (List[str]): command line parameters as list of strings
+          (for example  ``["--help"]``).
+
+    Returns:
+      :obj:`argparse.Namespace`: command line parameters namespace
+    """
+    population = np.array(first_generation_generator)
     population_len = len(population)
-    _logger.debug("initial_population: {}", population)
+    _logger.debug("initial_population: %s", population)
 
     scores = list(map(fitness, population))
-    _logger.debug("scores: {}", list(scores))
-    _logger.debug("best score: {}", max(scores))
+    _logger.debug("scores: %s", list(scores))
+    _logger.debug("best score: %s", max(scores))
+
+    bar = Bar("Processing", max=100)
 
     generation = 0
     while True:
@@ -40,12 +50,15 @@ def optimize(
 
         population = np.array(new_population)
         the_best_match = max(population, key=fitness)
-        print(
-            "Generation: {} S: {} fitness: {}".format(
-                generation, the_best_match, fitness(the_best_match)
-            )
+        _logger.debug(
+            "Generation: %s S: %s fitness: %s ",
+            generation,
+            the_best_match,
+            fitness(the_best_match),
         )
 
         generation += 1
-        if generation >= 100:  # stop condition
+        bar.next()
+        if generation >= max_generations:
+            bar.finish()
             return the_best_match, fitness(the_best_match)

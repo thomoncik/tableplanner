@@ -18,31 +18,16 @@ __license__ = "MIT"
 _logger = logging.getLogger(__name__)
 
 
-def fib(n):
-    """Fibonacci example function
+def optimize_guest_seating(guestsCsvFile, seatsCsvFile):
+    """Optimize guest seating trying to maximize sum of their preferences
 
     Args:
-      n (int): integer
+        guestsCsvFile (file): csv containig matrix of guest preferences
+                              (the bigger the number the more they want to sit near)
+        seatsCsvFile (file): csv containing matrix representing layout of tables
 
     Returns:
-      int: n-th Fibonacci number
-    """
-    assert n > 0
-    a, b = 1, 1
-    for i in range(n - 1):
-        a, b = b, a + b
-    return a
-
-
-def foo(guestsCsvFile, seatsCsvFile):
-    """Some action foo
-
-    Args:
-        a (file): lhs
-        b (file): rhs
-
-    Returns:
-        int: always 1 xd
+        list((int, string)): list of pairs (seat_id, guest_name)
     """
     guests = pd.read_table(guestsCsvFile, sep=",", index_col=0)
     guest_names = guests.columns.values
@@ -53,21 +38,24 @@ def foo(guestsCsvFile, seatsCsvFile):
     ]
 
     def fitness_score(chromosome):
-        _logger.info("Inside fitness function")
         score = 0
         for i, x in enumerate(chromosome):
             for j, y in enumerate(chromosome):
                 score += guests[guest_names[x]][guest_names[y]] * seats[str(i)][j]
         return score
 
-    return genetic.optimize(
+    seating, score = genetic.optimize(
         first_generation,
         genetic.selections.elite_selection,
         genetic.crossovers.order_crossover,
         genetic.mutations.swap_mutation,
         fitness_score,
         100,
+        0.3,
     )
+
+    _logger.info("Resulting score: %s", score)
+    return [(i, guest_names[seating[i]]) for i in range(len(seating))]
 
 
 # ---- CLI ----
@@ -90,12 +78,12 @@ def parse_args(args):
         version="tableplanner {ver}".format(ver=__version__),
     )
     parser.add_argument(
-        dest="layout", help="file with layout description", type=argparse.FileType("r")
-    )
-    parser.add_argument(
         dest="guests",
         help="file with guests and relationships description",
         type=argparse.FileType("r"),
+    )
+    parser.add_argument(
+        dest="layout", help="file with layout description", type=argparse.FileType("r")
     )
     parser.add_argument(
         "-v",
@@ -129,21 +117,24 @@ def setup_logging(loglevel):
 
 
 def main(args):
-    """Wrapper allowing :func:`fib` to be called with string arguments in a CLI fashion
+    """
+    Wrapper allowing :func:`optimize_guest_seating`
+    to be called with string arguments in a CLI fashion
 
-    Instead of returning the value from :func:`fib`, it prints the result to the
-    ``stdout`` in a nicely formated message.
+    Instead of returning the value from :func:`optimize_guest_seating`
+    it prints the result to the ``stdout`` in a nicely formated message.
 
     Args:
       args (List[str]): command line parameters as list of strings
-          (for example  ``["--verbose", "42"]``).
+          (for example  ``["--verbose", "data/guests.csv", "data/seats.csv"]``).
     """
     args = parse_args(args)
     setup_logging(args.loglevel)
     _logger.debug("Starting crazy calculations...")
-    print("Hello there")
-    bar = foo(args.layout, args.guests)
-    print("The result is {}".format(bar))
+
+    guest_seating = optimize_guest_seating(args.guests, args.layout)
+    print("The result is {}".format(guest_seating))
+
     _logger.info("Script ends here")
 
 
